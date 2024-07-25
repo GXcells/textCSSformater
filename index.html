@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Text Style Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        #editor {
+            min-height: 100px;
+        }
+        @media (max-width: 640px) {
+            .controls {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+            .controls > * {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-8">
+    <div class="max-w-3xl mx-auto bg-white p-4 sm:p-6 rounded-lg shadow-md">
+        <h1 class="text-xl sm:text-2xl font-bold mb-4">Enhanced Text Style Editor</h1>
+        <div class="controls mb-4 flex flex-wrap gap-2">
+            <select id="fontFamily" class="p-1 border rounded">
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="Montserrat, sans-serif">Montserrat</option>
+                <option value="Roboto, sans-serif">Roboto</option>
+                <option value="'Open Sans', sans-serif">Open Sans</option>
+                <option value="Lato, sans-serif">Lato</option>
+            </select>
+            <select id="fontSize" class="p-1 border rounded">
+                <option value="0.75rem">0.75rem</option>
+                <option value="1rem">1rem</option>
+                <option value="1.25rem">1.25rem</option>
+                <option value="1.5rem">1.5rem</option>
+                <option value="2rem">2rem</option>
+                <option value="12px">12px</option>
+                <option value="16px">16px</option>
+                <option value="20px">20px</option>
+                <option value="24px">24px</option>
+            </select>
+            <button id="boldBtn" class="p-1 border rounded">B</button>
+            <button id="italicBtn" class="p-1 border rounded">I</button>
+            <button id="underlineBtn" class="p-1 border rounded">U</button>
+            <input type="color" id="colorPicker" class="p-1">
+            <select id="textAlign" class="p-1 border rounded">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+            </select>
+            <button id="resetBtn" class="p-1 border rounded bg-red-500 text-white">Reset</button>
+        </div>
+        <div id="editor" class="border p-2 mb-4" contenteditable="true">
+            Edit this text to see the changes! Select a portion to style it independently.
+        </div>
+        <div class="mb-4">
+            <h2 class="text-lg sm:text-xl font-semibold mb-2">HTML:</h2>
+            <pre id="htmlOutput" class="bg-gray-200 p-2 rounded text-sm overflow-x-auto"></pre>
+        </div>
+        <div>
+            <h2 class="text-lg sm:text-xl font-semibold mb-2">CSS:</h2>
+            <pre id="cssOutput" class="bg-gray-200 p-2 rounded text-sm overflow-x-auto"></pre>
+        </div>
+    </div>
+    <script>
+        const editor = document.getElementById('editor');
+        const htmlOutput = document.getElementById('htmlOutput');
+        const cssOutput = document.getElementById('cssOutput');
+        let savedRange = null;
+
+        function updateOutputs() {
+            htmlOutput.textContent = editor.innerHTML;
+            
+            const styledElements = editor.querySelectorAll('[style]');
+            let cssText = '';
+            styledElements.forEach((el, index) => {
+                cssText += `#editor .styled-${index} {
+    ${el.style.cssText}
+}
+`;
+                el.classList.add(`styled-${index}`);
+            });
+            cssOutput.textContent = cssText;
+        }
+
+        function saveSelection() {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                savedRange = selection.getRangeAt(0);
+            }
+        }
+
+        function restoreSelection() {
+            if (savedRange) {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(savedRange);
+            }
+        }
+
+        function resetSelection() {
+            savedRange = null;
+        }
+
+        function applyStyle(style, value) {
+            restoreSelection();
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                if (!range.collapsed) {
+                    document.execCommand('styleWithCSS', false, true);
+                    document.execCommand(style, false, value);
+                    updateOutputs();
+                }
+            }
+        }
+
+        editor.addEventListener('mouseup', saveSelection);
+        editor.addEventListener('keyup', saveSelection);
+        editor.addEventListener('input', resetSelection);
+
+        document.getElementById('fontFamily').addEventListener('focus', saveSelection);
+        document.getElementById('fontFamily').addEventListener('change', (e) => {
+            applyStyle('fontName', e.target.value);
+        });
+
+        document.getElementById('fontSize').addEventListener('focus', saveSelection);
+        document.getElementById('fontSize').addEventListener('change', (e) => {
+            applyStyle('fontSize', e.target.value);
+        });
+
+        document.getElementById('boldBtn').addEventListener('click', () => {
+            restoreSelection();
+            document.execCommand('bold', false, null);
+            updateOutputs();
+        });
+
+        document.getElementById('italicBtn').addEventListener('click', () => {
+            restoreSelection();
+            document.execCommand('italic', false, null);
+            updateOutputs();
+        });
+
+        document.getElementById('underlineBtn').addEventListener('click', () => {
+            restoreSelection();
+            document.execCommand('underline', false, null);
+            updateOutputs();
+        });
+
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+            applyStyle('foreColor', e.target.value);
+        });
+
+        document.getElementById('textAlign').addEventListener('focus', saveSelection);
+        document.getElementById('textAlign').addEventListener('change', (e) => {
+            applyStyle('justifyLeft', null);
+            applyStyle('justifyCenter', null);
+            applyStyle('justifyRight', null);
+            applyStyle('justify' + e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1), null);
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            editor.innerHTML = editor.innerText;
+            resetSelection();
+            updateOutputs();
+        });
+
+        editor.addEventListener('input', updateOutputs);
+        updateOutputs();
+    </script>
+</body>
+</html>
